@@ -185,6 +185,8 @@ catch
     fprintf(' - Aorta skeletonization routine completed after erosion.\n');
 end
 
+cutCoords = ascendingAortaLocation(labeledskel,mask_struct,results_folder);
+
 % Find the index of the brachiocephalic junction
 for ii = 1:size(node,2)
     if(length(node(ii).vessel) == 2 && node(ii).vessel(1) == 1 && node(ii).vessel(2) == 2)
@@ -195,7 +197,8 @@ end
 % Find the coordinates of the junction (P0), as well as the points along
 % the aorta immediately preceding (P1) and after the junction (P2). Instead
 % of using the exact point, find the closest point on interpolated midline!
-junctionCoords = [node(junctionIdx).comx*vox(1) node(junctionIdx).comy*vox(2) node(junctionIdx).comz*vox(3)];
+%junctionCoords = [node(junctionIdx).comx*vox(1) node(junctionIdx).comy*vox(2) node(junctionIdx).comz*vox(3)];
+junctionCoords = cutCoords;
 % Calculate the distance from the junction to all the points in the midline
 distances = sqrt(sum(bsxfun(@minus, interpolatedMidline, junctionCoords).^2,2));
 P0 = interpolatedMidline(distances==min(distances),:);

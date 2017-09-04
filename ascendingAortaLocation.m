@@ -1,0 +1,100 @@
+function cutCoords = ascendingAortaLocation(labeledskel,mask_struct,varargin)
+% Description
+
+if nargin == 2
+    plotflag = false;
+elseif nargin == 3
+    path = varargin{1};
+    plotflag = true;
+else
+    error('Too many inputs')
+end
+
+% Grab the aorta mask
+aortaMask = mask_struct.mask;
+% Find the voxel size
+vox = mask_struct.vox;
+% Flatten the mask
+flatMask = any(aortaMask,3);
+
+% Flatten the labeled skel
+flatSkel = max(labeledskel,[],3);
+% Find the indices of the aorta midline
+midlineIdx = find(flatSkel == 1);
+% Convert to coordinates
+[Xmidline,Ymidline] = ind2sub(size(flatSkel),midlineIdx);
+% Find the indicies of the brachiocephalic artery
+bcaIdx = find(flatSkel == 2);
+% Convert to coordinates
+[Xbca,Ybca] = ind2sub(size(flatSkel),bcaIdx);
+
+% Find the X coordinate of the lowest value of the brachiocephalic branch
+junctionX = max(Xbca)+1;
+% Find the range of coordinates that are within the aorta at this level
+idx = find(flatMask(junctionX,:) == 1);
+minY = min(idx);
+maxY = max(idx);
+% Preallocate a vector to store the results
+ycoords = minY:1:maxY;
+distance = NaN(length(ycoords),1);
+% Find the distance above the junction (perpendicular) that each aorta
+% point is at
+for ii = 1:length(ycoords)
+    for jj = 0:junctionX-1
+       if(flatMask(junctionX-jj,ycoords(ii)) == 0)
+          distance(ii) = jj; 
+          break;
+       end
+    end
+end
+
+% Find the difference in each distance point
+distanceDiff = diff(distance);
+
+% Find the coordinate of the first big jump (>=3 vox)
+if(max(distanceDiff > 3))
+    jumpIdx = find(distanceDiff > 3,1);
+else
+    [~,jumpIdx] = max(distanceDiff);
+end
+Xcut = junctionX-distance(jumpIdx)+1;
+Ycut = minY+jumpIdx-1;
+
+
+
+% Find the X,Y,Z coordinates of the cut
+Zcut = find(aortaMask(Xcut,Ycut,:) == 1);
+Zcut = round(mean(Zcut));
+% Find the coordinates of the midline
+midlineIdx = find(labeledskel == 1);
+[Xmidline,Ymidline,Zmidline] = ind2sub(size(aortaMask),midlineIdx);
+% Convert to mm
+XmidlineC = Xmidline .* vox(1);
+YmidlineC = Ymidline .* vox(2);
+ZmidlineC = Zmidline .* vox(3);
+% Convert the cut coordinates to mm
+Xcutmm = Xcut * vox(1);
+Ycutmm = Ycut * vox(2);
+Zcutmm = Zcut * vox(3);
+% Calculate the distance from each midline point to the cut coordinate
+distance = ((XmidlineC-Xcutmm).^2 + (YmidlineC-Ycutmm).^2 + (ZmidlineC-Zcutmm).^2).^0.5;
+% Find the idx of the closest midline point
+[~,closestIdx] = min(distance);
+
+% Set the output
+cutCoords = [XmidlineC(closestIdx) YmidlineC(closestIdx) ZmidlineC(closestIdx)];
+
+% Plot and save
+if(plotflag == true)
+    fig101 = figure(101);
+    imshow(flatMask)
+    hold on;
+    plot(Ymidline,Xmidline,'.r')
+    plot(Ybca,Xbca,'.b')
+    plot([Ycut Ycut],[1 size(flatMask,1)],'-g')
+    plot([1 size(flatMask,2)], [Xcut Xcut], '-g')
+    plot(Ymidline(closestIdx),Xmidline(closestIdx),'ok')
+    set(gcf, 'Position', get(0, 'Screensize'));
+    saveas(fig101,[path filesep() 'AAcut.png'])
+end
+end

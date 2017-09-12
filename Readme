@@ -1,0 +1,3 @@
+To run locally, run BatchProcessing.m or cardiac4dflow.m
+
+To run on NUNDA, call cardiac4dflow

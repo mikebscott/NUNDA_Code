@@ -314,7 +314,8 @@ end
 clear tempVol; clear tempproperties; clear idx; clear maxVol;
 fprintf(' - Mask applied to isolate the ascending aorta.\n');
 
-
+% fill any holes
+maskedVolume = 
 
 % Get properties of the ascending aorta
 AAproperties = regionprops(maskedVolume);
@@ -593,9 +594,9 @@ end
 
 %% Calculate the MIP
 if ~isCEMRA
-    [veloMIP,vmaxcoords,tsystole] = velocityMIP(velStruct.dataAy,aortaMask);
+    [veloMIP,vmaxcoords,tsystole,Vmax] = velocityMIP(velStruct.dataAy,aortaMask);
     % Compute the MIP for the ascending aorta
-    [AAveloMIP,AAvmaxcoords] = velocityMIP(velStruct.dataAy,maskedVolume);
+    [AAveloMIP,AAvmaxcoords,~,AAVmax] = velocityMIP(velStruct.dataAy,maskedVolume);
     
     % Plot the MIP
     % Tile the MIPs (note that MIPx is oriented 90 degrees rotated)

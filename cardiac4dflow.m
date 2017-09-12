@@ -185,7 +185,7 @@ catch
     fprintf(' - Aorta skeletonization routine completed after erosion.\n');
 end
 
-cutCoords = ascendingAortaLocation(labeledskel,mask_struct,results_folder);
+[cutCoords,vertLimit] = ascendingAortaLocation(labeledskel,mask_struct,results_folder);
 
 % Find the index of the brachiocephalic junction
 for ii = 1:size(node,2)
@@ -272,6 +272,11 @@ end
 
 % Apply the mask
 maskedVolume = planeMask & aortaMask;
+% Apply another mask, which eliminates any values less than vertLimit,
+% helps to eliminate branches counted as ascending aorta
+vertcut = true(size(maskedVolume,1),size(maskedVolume,2),size(maskedVolume,3));
+vertcut(1:vertLimit-1,:,:) = false;
+maskedVolume = maskedVolume & vertcut;
 % Use bwlabeln to find the number of objects
 [L, ~] = bwlabeln(maskedVolume);
 % Find the labeled region which includes the sinus of Valsalva (Node 1 of
@@ -317,7 +322,7 @@ end
 clear tempVol; clear tempproperties; clear idx; clear maxVol;
 fprintf(' - Mask applied to isolate the ascending aorta.\n');
 
-
+maskedVolume = imfill(maskedVolume,'holes');
 
 % Get properties of the ascending aorta
 AAproperties = regionprops(maskedVolume);
@@ -596,9 +601,9 @@ end
 
 %% Calculate the MIP
 if ~isCEMRA
-    [veloMIP,vmaxcoords,tsystole] = velocityMIP(velStruct.dataAy,aortaMask);
+    [veloMIP,vmaxcoords,tsystole,Vmax] = velocityMIP(velStruct.dataAy,aortaMask);
     % Compute the MIP for the ascending aorta
-    [AAveloMIP,AAvmaxcoords] = velocityMIP(velStruct.dataAy,maskedVolume);
+    [AAveloMIP,AAvmaxcoords,~,AAVmax] = velocityMIP(velStruct.dataAy,maskedVolume);
     
     % Plot the MIP
     % Tile the MIPs (note that MIPx is oriented 90 degrees rotated)
@@ -665,10 +670,13 @@ end
 %% Generate a structure containing data to be saved
 NUNDAout.patient = NUNDAin.patient;
 NUNDAout.planes = planeStruct;
-NUNDAout.AAVmax = AAveloMIP.MIPz(AAveloMIP.MIPzcoords(1),AAveloMIP.MIPzcoords(2));
+NUNDAout.AAVmax = AAVmax;
+%NUNDAout.AAVmax = AAveloMIP.MIPz(AAveloMIP.MIPzcoords(1),AAveloMIP.MIPzcoords(2));
 NUNDAout.AAVmaxidx = AAvmaxcoords;
 NUNDAout.AAvolume = AAvolume;
-NUNDAout.Vmax = veloMIP.MIPz(veloMIP.MIPzcoords(1),veloMIP.MIPzcoords(2));
+NUNDAout.Vmax = Vmax;
+%NUNDAout.Vmax = sqrt(sum(velStruct.dataAy(AAvmaxcoords(1),AAvmaxcoords(2),AAvmaxcoords(3),:,tsystole).^2));
+%veloMIP.MIPz(veloMIP.MIPzcoords(1),veloMIP.MIPzcoords(2));
 NUNDAout.Vmaxidx = vmaxcoords;
 NUNDAout.vox = vox;
 NUNDAout.patientPath = folder_name;
@@ -739,7 +747,8 @@ isonormals(X,Y,Z,maskedVolume,hiso2);
 plot3(vox(2)*y,vox(1)*x,vox(3)*z,'square','Markersize',4,'MarkerFaceColor','k','Color','k');
 plot3(junctionCoords(2),junctionCoords(1),junctionCoords(3),'o','Markersize',8,'MarkerFaceColor','y','Color','k') 
 set(gcf,'Color','white');
-view(140,80)
+set(gca,'Ydir','reverse')
+view(2)
 title(sprintf('Ascending aorta volume %g mL',AAvolume/1000))
 % Save the figure
 saveas(fig4,[results_folder filesep() 'skel.png'])

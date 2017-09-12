@@ -1,4 +1,4 @@
-function cutCoords = ascendingAortaLocation(labeledskel,mask_struct,varargin)
+function [cutCoords,vertlimit] = ascendingAortaLocation(labeledskel,mask_struct,varargin)
 % Description
 
 if nargin == 2
@@ -52,10 +52,34 @@ end
 distanceDiff = diff(distance);
 
 % Find the coordinate of the first big jump (>=3 vox)
-if(max(distanceDiff > 3))
+firstfallidx = find(distanceDiff < -2,1);
+if(isempty(firstfallidx))
+    firstfallidx = round(length(distanceDiff)/3);
+end
+if(max(distanceDiff > 3) && find(distanceDiff > 3,1) < firstfallidx)
     jumpIdx = find(distanceDiff > 3,1);
 else
-    [~,jumpIdx] = max(distanceDiff);
+    % Testing: use the mean value close before firstfallidx
+    testval = mean(distance(1:firstfallidx));
+    testpoints = distance(1:firstfallidx);
+    [~,jumpIdx] = min(abs(testpoints - testval));
+    
+    
+%     possibleJumpIdx = find(distanceDiff == max(distanceDiff));
+%     if(length(possibleJumpIdx) > 1)
+%         if(length(possibleJumpIdx) == 2 && (possibleJumpIdx(1) == 1 || possibleJumpIdx(1) == 1))    
+%                 jumpIdx = possibleJumpIdx(2);
+%         else
+%             
+%             % Find the jumpIdx closest to 1/4 of the way across distanceDiff
+%             goalIdx = round(length(distanceDiff)/4);
+%             [~,temp] = min(abs(possibleJumpIdx - goalIdx));
+%             jumpIdx = possibleJumpIdx(temp);
+%             clear temp;
+%         end
+%     else
+%         [~,jumpIdx] = max(distanceDiff);
+%     end
 end
 Xcut = junctionX-distance(jumpIdx)+1;
 Ycut = minY+jumpIdx-1;
@@ -83,7 +107,7 @@ distance = ((XmidlineC-Xcutmm).^2 + (YmidlineC-Ycutmm).^2 + (ZmidlineC-Zcutmm).^
 
 % Set the output
 cutCoords = [XmidlineC(closestIdx) YmidlineC(closestIdx) ZmidlineC(closestIdx)];
-
+vertlimit = Xcut;
 % Plot and save
 if(plotflag == true)
     fig101 = figure(101);
@@ -94,7 +118,6 @@ if(plotflag == true)
     plot([Ycut Ycut],[1 size(flatMask,1)],'-g')
     plot([1 size(flatMask,2)], [Xcut Xcut], '-g')
     plot(Ymidline(closestIdx),Xmidline(closestIdx),'ok')
-    set(gcf, 'Position', get(0, 'Screensize'));
     saveas(fig101,[path filesep() 'AAcut.png'])
 end
 end

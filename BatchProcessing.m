@@ -81,5 +81,8 @@ fprintf('   Execution log saved to:\n     %s\n',[results_folder filesep() 'log.t
 fprintf('================================================:)\n\n');
 diary off
 
+% Text me that the code is finished
+%SendTxt('626-340-1991', 'att', 'Calculation completed.');
+
 
 

@@ -282,7 +282,19 @@ for ii = 1:(length(longestPathVector)-1)
     % Find the idx of the link to the next node
     node1 = longestPathVector(ii);
     node2 = longestPathVector(ii+1);
-    idx = find(node(node1).conn == node2,1);
+    idx = find(node(node1).conn == node2);
+    if length(idx) > 1
+       % If there is more than one link connecting the nodes (loop) take the shorter link
+       shortestIdx = 1;
+       currentShortest = inf;
+       for jj = 1:length(idx)
+           if length(link(node(node1).links(idx(jj))).point) < currentShortest
+              currentShortest = length(link(node(node1).links(idx(jj))).point);
+              shortestIdx = jj;
+           end
+       end
+       idx = shortestIdx;
+    end
     aortaskel(link(node(node1).links(idx)).point) = true;
     if(link(node(node1).links(idx)).n1 == node1)
         % If the link is in the correct order

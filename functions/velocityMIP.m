@@ -1,4 +1,4 @@
-function [veloMIP,vmaxcoords,tsystole] = velocityMIP(vel,mask)
+function [veloMIP,vmaxcoords,tsystole,Vmax] = velocityMIP(vel,mask)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -6,8 +6,6 @@ function [veloMIP,vmaxcoords,tsystole] = velocityMIP(vel,mask)
 % % Erode segmentation to offset segmentation errors
 se = strel(ones(3,3,3));
 erodedMask = imerode(mask,se);
-
-%erodedMask = mask;
 
 % Calculate the velocity magnitude at each voxel
 velocityMagnitude = zeros(size(vel,1),size(vel,2),size(vel,3),size(vel,5));
@@ -37,32 +35,37 @@ end
 tsystole = idx;
 clear idx;
 
-    
+
 % Grab velocity values from the eroded segmentation at systole +/- 1 time
 % point. Get only the maximum over the time point
 systoleVelocities = max(velocityMagnitude(:,:,:,systoleIdx),[],4);
-orderedVelocities = nonzeros(systoleVelocities);
-% Order the values from lowest to highest
-orderedVelocities = sort(orderedVelocities);
 
-% Take the diff of the velocity values
-D = diff(orderedVelocities);
-% T = C * mean (D), C = 10; from Rose, et al.
-C = 15;
-T = C * mean(D);
-
-% Find the index of the first value that is over T
-idx = find(D > T);
-% A few noisy low values cause problems, look only in the second half of D
-idx = min(idx(idx > length(D) / 2));
-% Eliminate all velocities over the value of T
-filteredVelocities = orderedVelocities(1:idx-1); 
-% Find the maximum velocity value idx
-vmaxidx = find(velocityMagnitude == filteredVelocities(end));
-% Convert to coordinates
-[vmaxx,vmaxy,vmaxz,vmaxt] = ind2sub(size(velocityMagnitude),vmaxidx);
+%% Testing
+[Vmax, vmaxx, vmaxy, vmaxz] = velMIPfilter(systoleVelocities);
 vmaxcoords = [vmaxx vmaxy vmaxz];
-% What to do if there are two maxima?
+
+% orderedVelocities = nonzeros(systoleVelocities);
+% % Order the values from lowest to highest
+% orderedVelocities = sort(orderedVelocities);
+% 
+% % Take the diff of the velocity values
+% D = diff(orderedVelocities);
+% % T = C * mean (D), C = 10; from Rose, et al.
+% C = 10;
+% T = C * mean(D);
+% 
+% % Find the index of the first value that is over T
+% idx = find(D > T);
+% % A few noisy low values cause problems, look only in the second half of D
+% idx = min(idx(idx > length(D) / 2));
+% % Eliminate all velocities over the value of T
+% filteredVelocities = orderedVelocities(1:idx-1); 
+% % Find the maximum velocity value idx
+% vmaxidx = find(velocityMagnitude == filteredVelocities(end));
+% % Convert to coordinates
+% [vmaxx,vmaxy,vmaxz,vmaxt] = ind2sub(size(velocityMagnitude),vmaxidx);
+% vmaxcoords = [vmaxx vmaxy vmaxz];
+% % What to do if there are two maxima?
 
 systoleVelocities(systoleVelocities == 0) = NaN;
 
